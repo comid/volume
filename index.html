@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>原生JS音控插件</title>
+<style>
+	*{margin: 0;padding:0;}
+	body{background-color: #000;}
+	.title{
+	    height: 80px;
+	    text-align: center;
+	    font-size: 25px;
+	    line-height: 80px;
+	    color: #aaa;
+    }
+    .music{text-align: center;}
+	.volbox{width: 600px;height: 200px;margin:50px auto;}
+	canvas{
+		display: inline-block;
+		cursor: pointer;
+	}
+</style>
+</head>
+<body>
+<div class="title">原生JS + canvas 制作音乐音量控件</div>
+<div class="music">
+	<audio id="audio" src="http://sc1.111ttt.cn/2016/1/12/04/205041600000.mp3" controls="controls"></audio>
+	<audio id="audio1" src="http://sc1.111ttt.cn/2016/1/12/09/205091416301.mp3" controls="controls"></audio>
+</div>
+
+
+<div class="volbox">
+	<div class="circlectrl">
+		<canvas width="200" height="200" id="canvas"></canvas>
+		<canvas width="200" height="200" id="canvas1" style="margin-left: 100px;"></canvas>
+	</div>
+	
+</div>
+<script>
+    var audio = document.getElementById(`audio`),
+	    audio1 = document.getElementById(`audio1`),
+	    canvas = document.getElementById(`canvas`),
+	    canvas1 = document.getElementById(`canvas1`),
+        cxt = canvas.getContext(`2d`),
+        cxt1 = canvas1.getContext(`2d`),
+        move = 68,
+        rotate =(move+135)*Math.PI/180,
+        rotate1 =(move+135)*Math.PI/180;
+
+		
+
+    var volctrl = (()=>{
+    	var x = 100,//中心点（画布200*200，则中心点是100*100）
+    	    y = 100,
+    	    r = 100;//最外面圆半径
+    	    
+    	return{
+    		init:function(move,obj,cxt,ad,rotate){
+    			//参数：
+    			//move:鼠标移动距离（取x轴距离与y轴距离的最大值）
+    			//obj：是哪一个canvas（针对多个音控控件）
+    			//cxt：obj对应的getContext('2d')
+    			//ad：对应哪一个audio
+    			//rotate：对应obj的初始或保存的弧度
+    			//
+    			var orotate = rotate;
+    			rotate =move*Math.PI/180+rotate;//根据最新移动来计算弧度+上次的弧度（避免每次从初始状态下画图）
+    			//console.log(rotate*180/Math.PI);//根据弧度获取角度
+    			
+    			//控制在135°——405°之间转动==
+    			if(rotate>=135*Math.PI/180 && rotate<=405*Math.PI/180){
+    				//执行下面的代码==
+    			}else{
+    				rotate = orotate;//因为上面rotate已改变，这是恢复上一次的原有弧度
+    				return false;//停止执行下面代码
+    			}
+    			var d = rotate*180/Math.PI;//根据弧度计算角度
+    			d = d<135?135:d;
+    			d = d>405?405:d;
+    			var vol = (d-135)/270;
+    			ad.volume = vol;//音量0-1  全部刻度为270
+    			// obj.vol = (d-135)/270;
+
+    			//window.localStorage.setItem('vol',(d-135)/270);
+    			cxt.clearRect(0,0,200,200);
+		    	//画圆
+		    	cxt.save();
+				cxt.beginPath();
+			    cxt.fillStyle = '#222';
+			    cxt.arc(x,y,r,0,2*Math.PI,false);
+			    cxt.closePath();
+			    cxt.fill();
+			    cxt.restore();
+
+			    //生成刻度
+			    cxt.save();
+			    for(var i=135;i<410;i=i+5){ //间隔5°
+			    	cxt.lineWidth = 1.5;
+				    cxt.lineCap = 'round';
+				    cxt.beginPath();
+				    cxt.moveTo(x,y);
+				    if(i<d && i!=135){
+						cxt.strokeStyle = '#07f0e8';
+				    }else{
+				    	cxt.strokeStyle = '#777';
+				    }
+				    cxt.arc(x,y,r*17/20,i*Math.PI/180,i*Math.PI/180,false);				    
+				    cxt.stroke();
+			    }
+			    cxt.restore();
+
+			    //覆盖圆
+			    cxt.save();
+				cxt.beginPath();
+			    cxt.fillStyle = '#222';
+			    cxt.arc(x,y,r*14/20,0,2*Math.PI,false);
+			    cxt.fill();
+			    cxt.restore();
+
+			    //内圆音量按钮
+			    cxt.save();
+				cxt.beginPath();
+				var color = cxt.createLinearGradient(150,100,50,10);
+				color.addColorStop(0,'#333');
+				color.addColorStop(0.5,'#555');
+				color.addColorStop(1,'#777');
+				cxt.strokeStyle = color;
+				cxt.lineWidth = 15;
+			    cxt.fillStyle = '#444';
+			    cxt.arc(x,y,r*10/20,0,2*Math.PI,false);
+			    cxt.stroke();
+			    cxt.fill();
+			    cxt.restore();
+
+			    //当前刻度指向
+			    cxt.save();
+			    cxt.strokeStyle = '#000';
+			    cxt.lineWidth = 2;
+				cxt.beginPath();
+				cxt.moveTo(x,y);
+			    cxt.arc(x,y,r*9/20,rotate,rotate,false);
+			    cxt.stroke();
+			    cxt.restore();
+
+			    //覆盖圆
+			    cxt.save();
+				cxt.beginPath();
+			    cxt.fillStyle = '#444';
+			    cxt.arc(x,y,r*6/20,0,2*Math.PI,false);
+			    cxt.fill();
+			    cxt.restore();
+
+			    //on/off
+			    // cxt.save();
+			    // cxt.strokeStyle = '#111';
+			    // cxt.lineWidth = 20;
+			    // cxt.lineCap = 'round';
+			    // cxt.beginPath();
+			    // cxt.moveTo(83,178);
+			    // cxt.lineTo(118,178);
+			    // cxt.stroke();
+			    // cxt.restore();
+
+			    // cxt.save();
+			    // cxt.fillStyle = '#000';
+			    // cxt.font = '9px Arial';
+			    // cxt.beginPath();
+			    // cxt.fillText('ON',82,182);
+			    // cxt.fillText('|',98,182);
+			    // cxt.closePath();
+			    // cxt.fillStyle = '#000';
+			    // cxt.beginPath();
+			    // cxt.fillText('OFF',103,182);
+			    // cxt.restore();
+
+			    // //点击事件
+			    // obj.onclick = function(e){
+			    // 	var e = e || event;
+			    // 	var cx = e.clientX - obj.getBoundingClientRect().left;
+			    // 	var cy = e.clientY - obj.getBoundingClientRect().top;
+			    // 	cxt.fillStyle = '#FFF';
+			    // 	cxt.beginPath();
+			    //     cxt.fillText('ON',82,182);
+			    // 	if(cxt.isPointInPath(cx,cy)){
+			    // 		alert(111);
+			    // 	}
+			    // }
+
+
+			    //鼠标拖拽控制音量
+			    obj.onmousedown = function(e){
+			    	var e = e || event;
+			    	var x0 = e.clientX;
+			    	var y0 = e.clientY;
+				    	document.onmousemove = function(e){
+				    		var e = e || evnet;
+				    		var x1 = e.clientX;
+				    		var y1 = e.clientY;
+				    		//console.log(x1-x0,y1-y0);
+				    		//取变化最大值
+				    		if(Math.abs(x1-x0)>=Math.abs(y1-y0)){
+				    			move = x1-x0;
+				    		}else{
+				    			move = -(y1-y0);
+				    		}
+				    		//console.log(move);
+				    		volctrl.init(move,obj,cxt,ad,rotate);
+				    		return false;
+				    	}
+				    	document.onmouseup = function(){
+				    		this.onmousemove = null;
+				    		this.onmouseup = null;
+				    	}
+		    	    }
+    		    }
+    	}
+
+    })();
+
+    volctrl.init(move,canvas,cxt,audio,rotate);
+    volctrl.init(move,canvas1,cxt1,audio1,rotate1);
+
+    
+
+
+</script>
+</body>
+</html>
